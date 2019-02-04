@@ -3,7 +3,7 @@ import logging
 from telegram.ext import Updater, CommandHandler
 
 from .exceptions import ConfigUniqueTelegramCommandsError
-
+from .handlers import dummy_handler, access_denied
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -66,7 +66,7 @@ class Bot:
 
     def _register_handlers(self):
         self.handlers = [
-            CommandHandler(cmd, lambda bot, update, user_data: update.message.reply_text('pop'), pass_user_data=True)
+            CommandHandler(cmd, self._reply, pass_user_data=True)
             for cmd in self.config.commands
         ]
 
@@ -78,3 +78,9 @@ class Bot:
         logger.info('Starting bot...')
         self.updater.start_polling()
         self.updater.idle()
+
+    def _reply(self, bot, update, user_data):
+        if str(update.message.from_user.id) == self.config.user_id:
+            return dummy_handler(bot, update, user_data)
+        else:
+            return access_denied(bot, update, user_data)
