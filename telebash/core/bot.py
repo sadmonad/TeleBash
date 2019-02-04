@@ -1,5 +1,6 @@
 import json
 import logging
+from telegram.ext import Updater, CommandHandler
 
 from .exceptions import ConfigUniqueTelegramCommandsError
 
@@ -53,6 +54,8 @@ class Config:
 class Bot:
     def __init__(self, config_path):
         self._load_config(config_path)
+        self.updater = Updater(self.config.bot_token)
+        self.handlers = []
 
     def _load_config(self, config_path, reload=False):
         self.config = Config(config_path)
@@ -60,3 +63,18 @@ class Bot:
     def reload_config(self, config_path=None):
         config_path = config_path if config_path is not None else self.config.path
         self._load_config(config_path, reload=True)
+
+    def _register_handlers(self):
+        self.handlers = [
+            CommandHandler(cmd, lambda bot, update, user_data: update.message.reply_text('pop'), pass_user_data=True)
+            for cmd in self.config.commands
+        ]
+
+        for handler in self.handlers:
+            self.updater.dispatcher.add_handler(handler)
+
+    def run(self):
+        self._register_handlers()
+        logger.info('Starting bot...')
+        self.updater.start_polling()
+        self.updater.idle()
