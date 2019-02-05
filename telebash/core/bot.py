@@ -29,8 +29,8 @@ class Config:
         logger.info('Validating config...')
         try:
             self.user_id = self._config['user_id']
-            self.bot_token = self._config['token']
-            self.commands = self._config['commands']
+            self.bot_token = self._config['bot_token']
+            self.commands = self._config['bot_commands']
 
             exist = []
 
