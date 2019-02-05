@@ -1,3 +1,6 @@
-dummy_handler = lambda bot, update, user_data: update.message.reply_text('pop')
+from .executors import DummyExecutor
 
-access_denied = lambda bot, update, user_data: update.message.reply_text('ACCESS_DENIED')
+
+def command_hanlder(bot, update, user_data, cmd):
+    cmd_result = DummyExecutor.execute(cmd)
+    update.message.reply_text(cmd_result)

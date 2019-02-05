@@ -7,5 +7,10 @@ class DummyExecutor:
 
     @classmethod
     def execute(cls, cmd):
-        cls.results = cls._executor.run([cmd['cmd'], cmd['args']], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        args = cls.process_args(cmd.args)
+        cls.results = cls._executor.run([cmd.cmd, args], stdout=subprocess.PIPE).stdout.decode('utf-8')
         return cls.results
+
+    @classmethod
+    def process_args(cls, args):
+        return ' '.join(args)

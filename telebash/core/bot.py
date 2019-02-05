@@ -3,7 +3,8 @@ import logging
 from telegram.ext import Updater, CommandHandler
 
 from .exceptions import ConfigUniqueTelegramCommandsError
-from .handlers import dummy_handler, access_denied
+from .handlers import command_hanlder
+from .commands import DummyCommand
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -11,10 +12,16 @@ logger = logging.getLogger('TeleBashBot')
 
 
 class Config:
+    required_fields = ('bot_token', 'user_id', 'bot_commands')
+
     def __init__(self, config_path, reload=False):
         self.path = config_path
         self._load(self.path, reload=reload)
         self._validate()
+        self._init()
+
+    def get_cmd(self, cmd):
+        return self.commands.get(cmd)
 
     def _load(self, config_path, reload=False):
         logger.info('Loading config...') if not reload else logger.info('Reloading config...')
@@ -25,16 +32,21 @@ class Config:
             logger.critical('Config file does not exist', exc_info=True)
             exit(1)
 
+    def _init(self):
+        self.user_id = self._config['user_id']
+        self.bot_token = self._config['bot_token']
+        self.commands = {k: DummyCommand(v) for k, v in self._config['bot_commands'].items()}
+
     def _validate(self):
         logger.info('Validating config...')
         try:
-            self.user_id = self._config['user_id']
-            self.bot_token = self._config['bot_token']
-            self.commands = self._config['bot_commands']
+            for field in Config.required_fields:
+                if field not in self._config.keys():
+                    raise KeyError(f'{field}')
 
             exist = []
 
-            for cmd in self.commands:
+            for cmd in self._config['bot_commands']:
                 if cmd not in exist:
                     exist.append(cmd)
                 else:
@@ -67,7 +79,7 @@ class Bot:
     def _register_handlers(self):
         self.handlers = [
             CommandHandler(cmd, self._reply, pass_user_data=True)
-            for cmd in self.config.commands
+            for cmd in self.config.commands.keys()
         ]
 
         for handler in self.handlers:
@@ -81,6 +93,7 @@ class Bot:
 
     def _reply(self, bot, update, user_data):
         if str(update.message.from_user.id) == self.config.user_id:
-            return dummy_handler(bot, update, user_data)
+            cmd = self.config.get_cmd(update.message.text.replace('/', ''))
+            return command_hanlder(bot, update, user_data, cmd.bash_cmd)
         else:
-            return access_denied(bot, update, user_data)
+            update.message.reply_text('ACCESS_DENIED')
